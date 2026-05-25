@@ -1,0 +1,29 @@
+# ── build outputs ──────────────────────────────────────────────────
+mymalloc.so
+bench/run
+
+# ── test binaries ──────────────────────────────────────────────────
+tests/test_basic
+tests/test_coalesce
+tests/test_realloc
+tests/test_stress
+
+# ── compiler artifacts ─────────────────────────────────────────────
+*.o
+*.a
+*.d
+
+# ── valgrind logs ──────────────────────────────────────────────────
+*.log
+vgcore.*
+
+# ── editors ────────────────────────────────────────────────────────
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# ── os ─────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
