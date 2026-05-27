@@ -14,22 +14,22 @@ TEST_BINS = tests/test_basic \
             tests/test_realloc \
             tests/test_stress
 
-tests/%: tests/%.cpp $(LIB)
-	$(CXX) $(CXXFLAGS) $(INCLUDES) -o $@ $
+tests/%: tests/%.cpp
+	$(CXX) $(CXXFLAGS) $(INCLUDES) -o $@ $<
 
-test: $(TEST_BINS)
+test: $(LIB) $(TEST_BINS)
 	@for t in $(TEST_BINS); do \
 		echo "── running $$t ──"; \
 		LD_PRELOAD=./$(LIB) $$t; \
 	done
 
 # ── Benchmark ──────────────────────────────────────────────────────
-bench: bench/bench.cpp $(LIB)
+bench: $(LIB) bench/bench.cpp
 	$(CXX) $(CXXFLAGS) $(INCLUDES) -O2 -o bench/run bench/bench.cpp
 	LD_PRELOAD=./$(LIB) ./bench/run
 
 # ── Valgrind ───────────────────────────────────────────────────────
-valgrind: $(TEST_BINS)
+valgrind: $(LIB) $(TEST_BINS)
 	@for t in $(TEST_BINS); do \
 		echo "── valgrind $$t ──"; \
 		LD_PRELOAD=./$(LIB) valgrind --leak-check=full --error-exitcode=1 $$t; \
