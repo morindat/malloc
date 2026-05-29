@@ -6,7 +6,7 @@ BlockHeader *heap_start = nullptr;
 // ── footer helpers ─────
 BlockFooter *get_footer(BlockHeader *block) {
     return reinterpret_cast<BlockFooter *>(
-        reinterpret_cast<char *>(block + 1) + block->size
+        reinterpret_cast<char *>(block) + HEADER_SIZE + block->size
     );
 }
 
@@ -14,12 +14,14 @@ BlockHeader *get_prev(BlockHeader *block) {
     if (block == heap_start)
         return nullptr;
 
+    // Get pointer to the footer of previous block
     BlockFooter *prev_footer = reinterpret_cast<BlockFooter *>(
-        reinterpret_cast<char *>(block) - FOOTER_SIZE
+        reinterpret_cast<char*>(block) - FOOTER_SIZE
     );
 
+    // Calculate where previous header starts
     return reinterpret_cast<BlockHeader *>(
-        reinterpret_cast<char *>(block) - FOOTER_SIZE - prev_footer->size - HEADER_SIZE
+        reinterpret_cast<char*>(prev_footer) - prev_footer->size - HEADER_SIZE
     );
 }
 
@@ -31,6 +33,13 @@ void write_footer(BlockHeader *block) {
 // ── alignment ────
 std::size_t align16(std::size_t size) {
     return (size + ALIGNMENT - 1) & ~(ALIGNMENT - 1);
+}
+
+void* align16_addr(void* raw_ptr) {
+    // Align the address to 16-byte boundary
+    uintptr_t addr = reinterpret_cast<uintptr_t>(raw_ptr);
+    uintptr_t aligned = (addr + ALIGNMENT - 1) & ~(ALIGNMENT - 1);
+    return reinterpret_cast<void*>(aligned);
 }
 
 // ── free list walk ──────
@@ -52,9 +61,8 @@ void split_block(BlockHeader *block, std::size_t size) {
     if (block->size < size + MIN_SPLIT_SIZE)
         return;
 
-    auto *remainder = reinterpret_cast<BlockHeader *>(
-        reinterpret_cast<char *>(block + 1) + size + FOOTER_SIZE
-    );
+    char* remainder_start = reinterpret_cast<char*>(block) + HEADER_SIZE + size + FOOTER_SIZE;
+    BlockHeader* remainder = reinterpret_cast<BlockHeader*>(remainder_start);
 
     remainder->size    = block->size - size - BLOCK_OVERHEAD;
     remainder->is_free = true;
@@ -68,29 +76,35 @@ void split_block(BlockHeader *block, std::size_t size) {
 
 // ── OS requests ─────────────
 BlockHeader *request_sbrk(BlockHeader *last, std::size_t size) {
-    auto *block = reinterpret_cast<BlockHeader *>(sbrk(0));
-
-    if (sbrk(static_cast<intptr_t>(BLOCK_OVERHEAD + size)) == reinterpret_cast<void *>(-1))
-        return nullptr;
-
-    block->size    = size;
+    std::size_t total_chunk = BLOCK_OVERHEAD + size;
+    std::size_t total_aligned = align16(total_chunk);
+    
+    void* raw = sbrk(total_aligned);  // No extra, no alignment needed
+    if (raw == (void*)-1) return nullptr;
+    
+    // Assume sbrk returns 16-byte aligned address (true on all modern systems)
+    BlockHeader* block = (BlockHeader*)raw;
+    block->size = total_aligned - BLOCK_OVERHEAD;
     block->is_free = false;
-    block->next    = nullptr;
+    block->next = nullptr;
     write_footer(block);
-
-    if (last)
+    
+    if (last) {
         last->next = block;
-    else
+    } else if (!heap_start) {
         heap_start = block;
-
+    }
+    
     return block;
 }
 
 BlockHeader *request_mmap(std::size_t size) {
-    std::size_t total = BLOCK_OVERHEAD + size;
+    std::size_t total_chunk = BLOCK_OVERHEAD + size;
+
+    std::size_t total_aligned = align16(total_chunk);
 
     void *ptr = mmap(
-        nullptr, total,
+        nullptr, total_aligned,
         PROT_READ | PROT_WRITE,
         MAP_PRIVATE | MAP_ANONYMOUS,
         -1, 0
@@ -99,8 +113,8 @@ BlockHeader *request_mmap(std::size_t size) {
     if (ptr == MAP_FAILED)
         return nullptr;
 
-    auto *block    = reinterpret_cast<BlockHeader *>(ptr);
-    block->size    = size;
+    BlockHeader *block    = (BlockHeader*)ptr;
+    block->size    = total_aligned - BLOCK_OVERHEAD;
     block->is_free = false;
     block->next    = nullptr;
     write_footer(block);

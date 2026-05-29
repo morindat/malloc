@@ -1,23 +1,26 @@
 #include "allocator_internal.hpp"
 
+// MALLOC
 extern "C" void *malloc(std::size_t size) {
     if (size == 0)
         return nullptr;
 
-    size = align16(size);
+    std::size_t needed_size = align16(size);
 
     BlockHeader *last  = nullptr;
-    BlockHeader *block = find_free_block(last, size);
+    BlockHeader *block = find_free_block(last, needed_size);
 
     if (block) {
-        split_block(block, size);
+        split_block(block, needed_size);
         block->is_free = false;
         write_footer(block);
         return reinterpret_cast<void *>(block + 1);
     }
 
-    if (size >= MMAP_THRESHOLD)
+    // use size here as it is, request_mmap() and sbrk() deal with alignment
+    if (needed_size >= MMAP_THRESHOLD)
         block = request_mmap(size);
+
     else
         block = request_sbrk(last, size);
 
@@ -27,6 +30,7 @@ extern "C" void *malloc(std::size_t size) {
     return reinterpret_cast<void *>(block + 1);
 }
 
+// FREE
 extern "C" void free(void *ptr) {
     if (!ptr)
         return;
@@ -57,6 +61,7 @@ extern "C" void free(void *ptr) {
     }
 }
 
+// CALLOC
 extern "C" void *calloc(std::size_t nmemb, std::size_t size) {
     if (nmemb == 0 || size == 0)
         return nullptr;
@@ -74,6 +79,7 @@ extern "C" void *calloc(std::size_t nmemb, std::size_t size) {
     return ptr;
 }
 
+// REALLOC
 extern "C" void *realloc(void *ptr, std::size_t size) {
     if (!ptr)
         return malloc(size);
@@ -83,16 +89,19 @@ extern "C" void *realloc(void *ptr, std::size_t size) {
         return nullptr;
     }
 
-    BlockHeader *block       = reinterpret_cast<BlockHeader *>(ptr) - 1;
-    std::size_t  aligned_size = align16(size);
+    BlockHeader *block = reinterpret_cast<BlockHeader *>(ptr) - 1;
+    std::size_t aligned_size = align16(size);
 
+    // If current block is big enough, return same pointer
     if (block->size >= aligned_size)
         return ptr;
 
-    void *new_ptr = malloc(size);
+    // Otherwise, allocate new block with the ALIGNED size
+    void *new_ptr = malloc(aligned_size); 
     if (!new_ptr)
         return nullptr;
 
+    // Copy only what's actually in the old block
     memcpy(new_ptr, ptr, block->size);
     free(ptr);
     return new_ptr;

@@ -181,6 +181,6 @@ int main() {
     test_realloc_data_integrity_large();
     test_realloc_multiple_grows();
     test_realloc_neighbours_intact();
-    std::cout << "=== all realloc tests passed ===\n";
+    std::cout << "=== ALL REALLOC TESTS PASSED ===\n\n";
     return 0;
 }

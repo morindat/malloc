@@ -290,6 +290,6 @@ int main() {
     test_repeated_cycles();
     test_calloc_stress();
     test_realloc_stress();
-    std::cout << "=== all stress tests passed ===\n";
+    std::cout << "=== ALL STRESS TESTS PASSED ===\n\n";
     return 0;
 }

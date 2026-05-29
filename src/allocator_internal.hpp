@@ -12,11 +12,13 @@
 struct BlockHeader {
     std::size_t  size;
     bool         is_free;
-    BlockHeader *next;
+    BlockHeader  *next;
+    char         _padding[7]; 
 };
 
 struct BlockFooter {
     std::size_t size;   // must always mirror header size
+    char        _padding[8];
 };
 
 // ── constants ──────────────────────────────────────────────────────

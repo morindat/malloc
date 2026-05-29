@@ -114,6 +114,6 @@ int main() {
     test_free_null();
     test_multiple_allocs();
     test_large_allocation();
-    std::cout << "----- ALL BASIC TESTS PASSED -----\n";
+    std::cout << "----- ALL BASIC TESTS PASSED -----\n\n";
     return 0;
 }

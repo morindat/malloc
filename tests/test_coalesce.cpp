@@ -170,6 +170,6 @@ int main() {
     test_split_then_coalesce();
     test_backward_coalesce();
     test_coalesce_preserves_live_data();
-    std::cout << "=== all coalesce tests passed ===\n";
+    std::cout << "=== ALL COALESCE TESTS PASSED ===\n\n";
     return 0;
 }

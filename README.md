@@ -46,11 +46,10 @@ make clean    # removes all build artifacts
 | Search strategy | first-fit | simpler, exits early, good practical performance |
 | Split threshold | header + 16 bytes | avoids creating unusable slivers |
 | sbrk/mmap threshold | 128 KB | mirrors glibc `MMAP_THRESHOLD` |
-| Coalescing | forward only | singly linked list; backward requires boundary tags |
+| Coalescing | forward and backward | singly linked list; backward implemented with boundary tags |
 
 ## Limitations
 
 - **Not thread safe** — no locking around the free list walk
-- **Forward coalescing only** — backward coalescing requires boundary tags
 - **No size classes** — one free list for all sizes; glibc uses per-size bins
 - **First-fit only** — no best-fit or segregated fit strategies
